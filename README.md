@@ -4,12 +4,9 @@ Aplicacion web local para revisar por lote hasta mas de 500 hojas OMR de 140 pre
 
 ## Inicio
 
-```powershell
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
+Ejecute `built.bat`
+Espere a que termine el proceso
+El ejecutable estará dentro de la carpeta `dist/LectorOMR.exe`
 
 Abra `http://127.0.0.1:8000` en el navegador.
 
