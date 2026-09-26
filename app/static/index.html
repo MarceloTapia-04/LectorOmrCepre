@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OMR - CEPRE UNU | Revisión de Examenes </title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+
+<body>
+  <header>
+    <div><span class="eyebrow">Procesamiento local</span>
+      <h1>Lector OMR - CEPRE UNU</h1>
+    </div>
+    <p>140 preguntas · A-E · revisión hoja por hoja</p>
+  </header>
+  <main>
+    <section id="start" class="card start">
+      <div class="start-header-row">
+        <div>
+          <span class="eyebrow">Paso 1</span>
+          <h2>Cargar lote</h2>
+        </div>
+        <button id="btn-open-answer-key" class="secondary answer-key-btn" type="button">
+          🔑 Configurar Clave de Respuestas
+        </button>
+      </div>
+      <div id="start-key-banner" class="key-status-banner">
+        <span class="key-status-dot"></span>
+        <span id="start-key-status-text">Comprobando clave oficial...</span>
+      </div>
+      <p>Seleccione hasta 500+ hojas en PDFs. Los exámenes se procesan en paralelo por lotes de alta velocidad. Use la
+        <a href="/ficha-omr.pdf" download="ficha-oficial-140-preguntas.pdf">ficha oficial de 140 preguntas</a> (A4 horizontal) para que la cuadrícula
+        coincida sin calibrar.</p>
+      <label class="dropzone" for="files"><strong>Elegir archivos</strong><span>Las imágenes se procesan localmente en
+          paralelo.</span><input id="files" type="file" accept="image/jpeg,image/png,application/pdf" multiple></label>
+      <button id="upload" disabled>Procesar lote</button>
+      <div id="start-progress" class="upload-progress-wrap" hidden>
+        <div class="progress-bar-header">
+          <span id="start-progress-title">Subiendo y procesando exámenes...</span>
+          <strong id="start-progress-pct">0%</strong>
+        </div>
+        <div class="progress-bar-track">
+          <div id="start-progress-fill" class="progress-bar-fill" style="width: 0%"></div>
+        </div>
+        <p id="start-progress-subtext" class="progress-bar-subtext">Preparando lote inicial...</p>
+      </div>
+      <p id="upload-status" class="status" aria-live="polite"></p>
+    </section>
+
+    <section id="workspace" hidden>
+      <aside class="queue card">
+        <div class="queue-title">
+          <div><span class="eyebrow">Lote activo</span>
+            <h2>Hojas</h2>
+          </div>
+          <div class="queue-top-actions">
+            <button id="btn-workspace-key" class="secondary key-chip-btn" type="button"
+              title="Ver o modificar clave de respuestas">🔑 Clave</button>
+            <button id="export" class="secondary" disabled title="Exportar resumen general a Excel">📊 Resumen</button>
+            <button id="export-detailed" class="secondary" disabled
+              title="Exportar Excel detallado con todas las respuestas marcadas (P1 a P140)">📋 Respuestas
+              Detalladas</button>
+          </div>
+        </div>
+        <div class="queue-upload-wrap">
+          <button id="btn-upload-more" class="upload-more-btn" type="button">➕ Subir más exámenes</button>
+          <input id="more-files" type="file" accept="image/jpeg,image/png,application/pdf" multiple hidden>
+        </div>
+        <div id="workspace-upload-progress" class="upload-progress-wrap" hidden>
+          <div class="progress-bar-header">
+            <span id="workspace-progress-title">Procesando exámenes...</span>
+            <strong id="workspace-progress-pct">0%</strong>
+          </div>
+          <div class="progress-bar-track">
+            <div id="workspace-progress-fill" class="progress-bar-fill" style="width: 0%"></div>
+          </div>
+          <p id="workspace-progress-subtext" class="progress-bar-subtext">0 / 0 procesados</p>
+        </div>
+        <div id="batch-summary" class="summary"></div>
+        <ol id="sheet-list"></ol>
+      </aside>
+      <section class="viewer card">
+        <div class="viewer-title">
+          <div class="viewer-heading">
+            <span id="sheet-index" class="eyebrow"></span>
+            <h2 id="sheet-title">Hoja</h2>
+          </div>
+
+          <div id="exam-stats" class="exam-stats-bar" aria-label="Estadísticas de la hoja">
+            <div class="stat-box stat-score" title="Nota calculada (+1 correcta, -0.01 incorrecta, 0 blanco)">
+              <span class="stat-count" id="stat-score-count">0.00</span>
+              <span class="stat-label">Nota</span>
+            </div>
+            <div class="stat-box stat-correct" title="Respuestas correctas (+1 pt c/u)">
+              <span class="stat-count" id="stat-correct-count">0</span>
+              <span class="stat-label">Aciertos</span>
+            </div>
+            <div class="stat-box stat-incorrect" title="Respuestas incorrectas o dobles (-0.01 pts c/u)">
+              <span class="stat-count" id="stat-incorrect-count">0</span>
+              <span class="stat-label">Errores</span>
+            </div>
+            <div class="stat-box stat-marked" title="Respuestas marcadas">
+              <span class="stat-count" id="stat-marked-count">0</span>
+              <span class="stat-label">Marcadas</span>
+            </div>
+            <div class="stat-box stat-blank" title="Respuestas vacías">
+              <span class="stat-count" id="stat-blank-count">0</span>
+              <span class="stat-label">Vacías</span>
+            </div>
+            <div class="stat-box stat-multiple" title="Respuestas con doble marca">
+              <span class="stat-count" id="stat-multiple-count">0</span>
+              <span class="stat-label">Doble marca</span>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="grid" class="secondary">Ocultar cuadrícula</button>
+            <button id="btn-manual-correct" class="secondary">✏️ Corregir manualmente</button>
+            <button id="approve">Aprobar hoja</button>
+          </div>
+        </div>
+
+        <!-- Barra de Combo Box para Seleccionar Estudiante -->
+        <div class="sheet-student-bar" aria-label="Asignar estudiante al examen">
+          <div class="student-bar-main">
+            <div class="student-bar-label-wrap">
+              <span class="student-icon" aria-hidden="true">🎓</span>
+              <label for="student-combo-input" class="student-label">
+                <strong>Estudiante del examen</strong>
+                <span class="student-subtext">Código + Nombre</span>
+              </label>
+            </div>
+
+            <div class="student-combobox-container" id="student-combobox-wrap">
+              <div class="student-input-group">
+                <input type="text" id="student-combo-input" class="student-combo-input"
+                  placeholder="Escriba o elija código o nombre (ej. 70123451 - AGUILAR...)" autocomplete="off"
+                  spellcheck="false" aria-autocomplete="list" aria-expanded="false">
+                <button type="button" id="student-combo-clear" class="student-btn-icon"
+                  title="Quitar asignación de esta hoja" aria-label="Quitar estudiante" hidden>&times;</button>
+                <button type="button" id="student-combo-toggle" class="student-btn-icon student-btn-arrow"
+                  title="Ver lista de estudiantes" aria-label="Desplegar lista">
+                  <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd"
+                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                      clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+
+              <div id="student-dropdown" class="student-dropdown-menu" hidden>
+                <div class="student-dropdown-header">
+                  <span>Padrón de estudiantes</span>
+                  <span id="student-count-badge" class="student-count-badge">0 alumnos</span>
+                </div>
+                <div id="student-options-list" class="student-options-list" role="listbox">
+                  <!-- Opciones cargadas dinámicamente -->
+                </div>
+                <div class="student-dropdown-footer">
+                  <span>💡 Busca por DNI/código o nombres. Puedes escribir un alumno nuevo y pulsar Enter.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="student-status-badge-wrap">
+              <span id="student-status-tag" class="student-tag tag-unassigned">Sin asignar</span>
+            </div>
+          </div>
+          <div class="student-bar-actions">
+            <button id="btn-manage-students" class="secondary student-manage-btn" type="button"
+              title="Ver o editar padrón de estudiantes">📋 Gestionar alumnos</button>
+          </div>
+        </div>
+
+        <div class="threshold"><label for="threshold">Oscuridad mínima de marca <strong
+              id="threshold-value">180</strong></label><input id="threshold" type="range" min="45" max="220"
+            value="180"><button id="reread" class="secondary">Releer hoja</button></div>
+        <p id="viewer-status" class="status" aria-live="polite"></p>
+        <div class="canvas-wrap"><canvas id="canvas" width="1280" height="920"></canvas></div>
+        <p class="hint"><span class="blue">Azul</span> marcada · <span class="orange">Naranja</span> doble marca · <span
+            class="gray">Gris</span> vacía · <span class="green">Verde</span> corrección manual</p>
+
+        <!-- Tabla de Resultados de Exámenes Aprobados -->
+        <div id="results-panel" class="results-panel" hidden>
+          <div class="results-header">
+            <h3 class="results-title">📋 Tabla de Resultados de Exámenes Aprobados</h3>
+            <div class="results-header-actions">
+              <span id="results-count" class="results-count-badge">0 aprobados</span>
+              <button id="btn-results-export-detailed" class="export-detailed-btn" type="button"
+                title="Descargar Excel con todas las respuestas marcadas de cada estudiante (P1-P140)" disabled>
+                📑 Exportar Respuestas Detalladas (Excel)
+              </button>
+            </div>
+          </div>
+          <div class="results-table-wrap">
+            <table id="results-table" class="results-table">
+              <thead>
+                <tr>
+                  <th>N°</th>
+                  <th>Código</th>
+                  <th>Estudiante</th>
+                  <th class="col-correct">✓ Correctas</th>
+                  <th class="col-incorrect">✗ Incorrectas</th>
+                  <th class="col-blank">○ En Blanco</th>
+                  <th class="col-score">Nota Final</th>
+                </tr>
+              </thead>
+              <tbody id="results-tbody">
+                <!-- Filas generadas dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- Modal Flotante de Corrección Manual -->
+    <div id="modal-correction" class="modal-backdrop" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">Edición manual</span>
+            <h2 id="modal-title">Corregir manualmente</h2>
+            <p id="modal-subtitle" class="modal-subtitle"></p>
+          </div>
+          <button id="modal-close" class="icon-button" type="button" aria-label="Cerrar modal">&times;</button>
+        </div>
+
+        <div class="modal-stats-bar">
+          <div id="modal-stats" class="modal-stats"></div>
+          <div class="modal-quick-nav">
+            <span>Bloques:</span>
+            <button type="button" class="chip-btn" data-jump="b1">1 - 35</button>
+            <button type="button" class="chip-btn" data-jump="b2">36 - 70</button>
+            <button type="button" class="chip-btn" data-jump="b3">71 - 105</button>
+            <button type="button" class="chip-btn" data-jump="b4">106 - 140</button>
+          </div>
+        </div>
+
+        <div class="modal-body">
+          <div id="modal-blocks-container" class="modal-blocks-grid"></div>
+        </div>
+
+        <div class="modal-footer">
+          <div class="modal-footer-info">
+            <span>Al pulsar <strong>Actualizar</strong>, volverás al visor para aprobar la hoja.</span>
+          </div>
+          <div class="modal-actions">
+            <button id="modal-cancel" type="button" class="secondary">Cancelar</button>
+            <button id="modal-submit" type="button" class="primary">Actualizar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Flotante de Gestión de Padrón de Alumnos -->
+    <div id="modal-students" class="modal-backdrop" hidden>
+      <div class="modal-card modal-card-narrow" role="dialog" aria-modal="true" aria-labelledby="modal-students-title">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">Padrón de estudiantes</span>
+            <h2 id="modal-students-title">Gestionar lista de alumnos</h2>
+            <p class="modal-subtitle">Escriba o pegue la lista (un alumno por línea: CÓDIGO - APELLIDOS Y NOMBRES o
+              separados por coma).</p>
+          </div>
+          <button id="modal-students-close" class="icon-button" type="button" aria-label="Cerrar modal">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="students-editor-wrap">
+            <label for="students-textarea" class="eyebrow" style="margin-bottom:6px;">Lista de alumnos (guardado en
+              data/alumnos.txt)</label>
+            <textarea id="students-textarea" class="students-textarea" rows="14"
+              placeholder="70123451 - AGUILAR PAREDES, MARCO ANTONIO&#10;70123452 - ALVAREZ CORDOVA, SOFIA VALENTINA&#10;..."></textarea>
+            <span class="hint-small">Formato admitido: <code>70123456 - APELLIDO NOMBRE</code> o
+              <code>70123456, APELLIDO NOMBRE</code></span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <div class="modal-footer-info">
+            <span id="students-save-status"></span>
+          </div>
+          <div class="modal-actions">
+            <button id="modal-students-cancel" type="button" class="secondary">Cerrar</button>
+            <button id="modal-students-save" type="button" class="primary">Guardar padrón</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Flotante de Clave de Respuestas (140 preguntas) -->
+    <div id="modal-answer-key" class="modal-backdrop" hidden>
+      <div class="modal-card modal-card-wide" role="dialog" aria-modal="true" aria-labelledby="modal-key-title">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">Pauta de Calificación</span>
+            <h2 id="modal-key-title">Clave oficial de respuestas</h2>
+            <p class="modal-subtitle">Configure la alternativa correcta (A-E) para cada una de las 140 preguntas del
+              examen.</p>
+          </div>
+          <button id="modal-key-close" class="icon-button" type="button" aria-label="Cerrar modal">&times;</button>
+        </div>
+
+        <div class="modal-stats-bar key-toolbar-bar">
+          <div class="key-summary-wrap">
+            <span id="key-summary-badge" class="key-count-pill">0 / 140 configuradas</span>
+            <span class="key-rule-text">Correcta: <strong>+1.0</strong> · Incorrecta: <strong>-0.01</strong> · Blanco:
+              <strong>0.0</strong></span>
+          </div>
+          <div class="key-tools">
+            <button type="button" id="btn-key-toggle-paste" class="chip-btn" title="Pegar respuestas en bloque">📋 Pegar
+              texto</button>
+            <button type="button" id="btn-key-sample" class="chip-btn" title="Llenar con clave de ejemplo A-E">🎲
+              Ejemplo A-E</button>
+            <button type="button" id="btn-key-clear" class="chip-btn chip-btn-danger"
+              title="Limpiar todas las preguntas">🗑️ Limpiar</button>
+          </div>
+        </div>
+
+        <!-- Panel colapsable de pegado rápido de texto -->
+        <div id="key-paste-box" class="key-paste-box" hidden>
+          <div class="key-paste-inner">
+            <label for="key-paste-input" class="eyebrow">Pegar lista de respuestas (ej: "A B C D E..." o "1:A 2:B
+              3:C...")</label>
+            <textarea id="key-paste-input" rows="3" class="key-paste-textarea"
+              placeholder="A B C D E A B C D E... o 1:A, 2:B, 3:C..."></textarea>
+            <div class="key-paste-actions">
+              <button type="button" id="btn-key-apply-paste" class="primary key-apply-btn">Cargar a la
+                cuadrícula</button>
+              <button type="button" id="btn-key-cancel-paste" class="secondary key-apply-btn">Ocultar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-quick-nav key-nav-bar">
+          <span>Ir al bloque:</span>
+          <button type="button" class="chip-btn" data-key-jump="kb1">1 - 35</button>
+          <button type="button" class="chip-btn" data-key-jump="kb2">36 - 70</button>
+          <button type="button" class="chip-btn" data-jump="kb3" data-key-jump="kb3">71 - 105</button>
+          <button type="button" class="chip-btn" data-jump="kb4" data-key-jump="kb4">106 - 140</button>
+        </div>
+
+        <div class="modal-body">
+          <div id="key-blocks-container" class="key-blocks-grid">
+            <!-- 4 Bloques generados dinámicamente -->
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <div class="modal-footer-info">
+            <span>Al pulsar <strong>Guardar clave</strong>, los exámenes se pondrán en <strong>revisión</strong> y se
+              recalcularán las notas.</span>
+          </div>
+          <div class="modal-actions">
+            <button id="modal-key-cancel" type="button" class="secondary">Cancelar</button>
+            <button id="modal-key-save" type="button" class="primary">Guardar clave</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script src="/app.js"></script>
+</body>
+
+</html>
